@@ -1,0 +1,11 @@
+%dw 2.0
+
+type auto_66e4f171_aac2_4722_95f5_fae43006d681_Output_Variables_messages = Array<{ _?: java_lang_Object {"class": "java.lang.Object",
+  "typeAlias": "Object",
+  "typeId": "java.lang.Object"} }>
+type java_lang_Object = {|  |} {"class": "java.lang.Object",
+"typeAlias": "Object",
+"typeId": "java.lang.Object"}
+
+
+

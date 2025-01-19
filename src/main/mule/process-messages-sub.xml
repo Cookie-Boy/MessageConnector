@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<sub-flow name="processMessagesSubFlow" doc:id="66e4f171-aac2-4722-95f5-fae43006d681" >
+		<db:select doc:name="Fetch messages" doc:id="3858f839-944e-4325-aae3-8a7c4ac16218" config-ref="Postgres_MSG_Config">
+			<db:sql ><![CDATA[SELECT * FROM outer_msg_obj.msg_2025_1 
+WHERE "msg-id" > :lastProcessedId
+ORDER BY "msg-id" ASC
+LIMIT 2]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'lastProcessedId': payload}]]]></db:input-parameters>
+		</db:select>
+		<set-variable value="#[payload]" doc:name="Save the messages" doc:id="81a108dc-8f95-4c0f-8db2-c6e2c8ce6b66" variableName="messages"/>
+		<parallel-foreach doc:name="Parallel process each message" doc:id="cfd25ead-a06d-4e6d-8859-6b73324ce1be" maxConcurrency="2">
+			<flow-ref doc:name="Validate and transform message" doc:id="6998155f-10a2-42c8-9eac-4b1edbb36f09" name="validateAndTransformSubFlow"/>
+			<choice doc:name="Choice" doc:id="330622c8-71f4-42ae-867c-2d4760378dcf" >
+				<when expression="#[payload != null]">
+					<logger level="INFO" doc:name="[INFO] Validated item" doc:id="bdcdb63f-5106-4e4f-8c4b-db2dd8a30976" message="Validated: #[payload]" />
+					<flow-ref doc:name="Send to Mock server" doc:id="1dd655c1-6854-4866-8767-7612aeafdea0" name="sendToMockSubFlow" />
+				</when>
+			</choice>
+		</parallel-foreach>
+		<set-payload value="#[vars.messages]" doc:name="Set Payload" doc:id="6615f1ab-a77d-4dae-8cdb-8e5075f4d61b" />
+	</sub-flow>
+</mule>

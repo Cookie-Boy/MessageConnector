@@ -1,0 +1,79 @@
+{
+  "type": "object",
+  "properties": {
+    "paymens": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["CASH", "ONLINE"]
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["RUB", "USD"]
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0
+        },
+        "paymensTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "paymensId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": ["method", "currency", "value", "paymensTime", "paymensId"],
+      "additionalProperties": false
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "id": {
+            "type": "integer",
+            "minimum": 10000,
+            "maximum": 9999999999
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "count", "id", "price"],
+        "additionalProperties": false
+      }
+    },
+    "address": {
+      "type": "object",
+      "properties": {
+        "country": {
+          "type": "string",
+          "enum": ["RU", "KZ"]
+        },
+        "pvzId": {
+          "type": "integer"
+        }
+      },
+      "required": ["country", "pvzId"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["paymens", "items", "address"],
+  "additionalProperties": false
+}

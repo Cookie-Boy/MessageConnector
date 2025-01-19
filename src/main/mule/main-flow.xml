@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+		<configuration-properties doc:name="Configuration properties" doc:id="90fadaae-1a2d-4c4d-b43b-bf5e7ce53d06" file="conf/db.yaml" />
+	<db:config name="Postgres_ESB_Config" doc:name="Database Config" doc:id="b07a287a-3cbe-4155-b061-2a78812802b3" >
+		<db:generic-connection url='#["jdbc:postgresql://localhost:5432/esb"]' driverClassName="org.postgresql.Driver" user="#[p('database.esb.username')]" password="#[p('database.esb.password')]" />
+	</db:config>
+	<db:config name="Postgres_MSG_Config" doc:name="Database Config" doc:id="dc2e1369-4f63-4ab7-a865-9cd94883c26d" >
+		<db:generic-connection driverClassName="org.postgresql.Driver" url='#["jdbc:postgresql://localhost:5432/msg"]' user="#[p('database.msg.username')]" password="#[p('database.msg.password')]"/>
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="116c0da3-347e-41e1-9a89-a8e13523f8ae" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="mainFlow" doc:id="e8072b4a-338e-4c62-916e-dcd2d86259d1" >
+		<scheduler doc:name="Scheduler" doc:id="d8cd38aa-5e8e-4839-8b87-e33493b889d6" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="30000"/>
+			</scheduling-strategy>
+		</scheduler>
+		<flow-ref doc:name="Get last processed ID" doc:id="24d0f73d-0f73-49b3-8fb8-ad10638770a2" name="getLastIdSubFlow"/>
+		<logger level="INFO" doc:name="[INFO] Received last ID" doc:id="ac2245e7-42e8-4876-bf90-ed1fe106da7c" message="Received last ID: #[payload]" />
+		<set-variable value="#[payload]" doc:name="lastProcessedId" doc:id="d89e074c-2cd4-43f4-9961-22265390ebec" variableName="lastProcessedId"/>
+		<set-payload value="#[vars.lastProcessedId default 0]" doc:name="Put received last ID to payload" doc:id="24fcb88a-2a46-44f2-aa34-9fe3f998c2ea" />
+		<flow-ref doc:name="Process messages" doc:id="7235efba-b4fe-4ac5-9f3f-cb38b7776340" name="processMessagesSubFlow"/>
+		<ee:transform doc:name="Transform Message" doc:id="6c9f9143-cc2e-4c3b-a687-93802bc6d86c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"lastProcessedId": vars.lastProcessedId,
+	"messageId": payload[-1].'msg-id'
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="Update last processed ID" doc:id="c71b505f-12f1-47d1-9625-2a25423e70bb" name="updateLastProcessedIdSubFlow"/>
+	</flow>
+</mule>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="97e34f73-e84a-401c-b5fa-1367d0894052" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
+	<sub-flow name="sendToMockSubFlow" doc:id="ee1a36ee-f37d-4714-9044-7444e9de1bda" >
+		<http:request method="POST" doc:name="Request" doc:id="8e4c1ff6-f845-4424-9bd7-aee29020280b" config-ref="HTTP_Request_configuration" path="/test">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json"
+}]]]></http:headers>
+		</http:request>
+	</sub-flow>
+</mule>
