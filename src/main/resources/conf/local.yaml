@@ -1,0 +1,24 @@
+middleware:
+  scheduler:
+    frequency: '30000'
+    startDelay: '0'
+  postgres:
+    common:
+      host: 'localhost'
+      port: '5432'
+      username: 'postgres'
+      password: '12345'
+    esb:
+      database: 'esb'
+      host: '${middleware.postgres.common.host}'
+      port: '${middleware.postgres.common.port}'
+      username: '${middleware.postgres.common.username}'
+      password: '${middleware.postgres.common.password}'
+      url: 'jdbc:postgresql://${middleware.postgres.esb.host}:${middleware.postgres.esb.port}/${middleware.postgres.esb.database}' 
+    msg:
+      database: 'msg'
+      host: '${middleware.postgres.common.host}'
+      port: '${middleware.postgres.common.port}'
+      username: '${middleware.postgres.common.username}'
+      password: '${middleware.postgres.common.password}'
+      url: 'jdbc:postgresql://${middleware.postgres.msg.host}:${middleware.postgres.msg.port}/${middleware.postgres.msg.database}'

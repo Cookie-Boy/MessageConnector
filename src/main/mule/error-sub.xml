@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<sub-flow name="errorSubFlow" doc:id="f5f8799a-ca36-42d8-b64b-e171193653d9" >
+		<logger level="INFO" doc:name="[ERROR] Log Error" doc:id="c3d3ee13-b1e2-48a9-952b-a556b27ce153" message="Error occurred: #[error.description]"/>
+		<set-payload value="#[error]" doc:name="Set Error Response" doc:id="0f2aeaa0-9e60-417a-9947-da73eb675ed3" />
+	</sub-flow>
+</mule>
