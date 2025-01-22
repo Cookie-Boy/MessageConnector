@@ -16,19 +16,22 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="116c0da3-347e-41e1-9a89-a8e13523f8ae" >
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
-	<global-property doc:name="Global Property" doc:id="d70777d0-e74b-40b6-a7f2-f581be3090e3" name="messageLimit" value="3" />
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="39249e43-2213-4575-b24f-f7e0c986ed95" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
 	<flow name="mainFlow" doc:id="e8072b4a-338e-4c62-916e-dcd2d86259d1" >
 		<scheduler doc:name="Scheduler" doc:id="d8cd38aa-5e8e-4839-8b87-e33493b889d6" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="${middleware.scheduler.frequency}" startDelay="${middleware.scheduler.startDelay}"/>
 			</scheduling-strategy>
 		</scheduler>
-		<flow-ref doc:name="Get Last Processed ID" doc:id="24d0f73d-0f73-49b3-8fb8-ad10638770a2" name="getLastIdSubFlow"/>
-		<logger level="INFO" doc:name="[INFO] Received Last ID" doc:id="ac2245e7-42e8-4876-bf90-ed1fe106da7c" message="Received last ID: #[payload]" />
-		<set-variable value="#[payload]" doc:name="Store Last Processed ID" doc:id="d89e074c-2cd4-43f4-9961-22265390ebec" variableName="lastProcessedId"/>
-		<set-payload value="#[vars.lastProcessedId default 0]" doc:name="Put Last ID to Payload" doc:id="24fcb88a-2a46-44f2-aa34-9fe3f998c2ea" />
-		<flow-ref doc:name="Process Messages" doc:id="7235efba-b4fe-4ac5-9f3f-cb38b7776340" name="processMessagesSubFlow"/>
-		<choice doc:name="Check and Update Last ID" doc:id="c688fbc7-2a34-4f71-a087-3c4fec71e057" >
+		<logger level="INFO" doc:name="[INFO] Start of Main Flow" doc:id="ac10582d-751b-47a9-997a-c84aff3eb185" message="Start of Main Flow"/>
+		<parallel-foreach doc:name="Main Parallel For Each" doc:id="67f3be24-93a3-4e29-9034-59d01bc6e24f" maxConcurrency="1" timeout="180000" collection="#[[null]]">
+			<flow-ref doc:name="Get Last Processed ID" doc:id="24d0f73d-0f73-49b3-8fb8-ad10638770a2" name="getLastIdSubFlow" />
+			<logger level="INFO" doc:name="[INFO] Received Last ID" doc:id="ac2245e7-42e8-4876-bf90-ed1fe106da7c" message="Received last ID: #[vars.lastProcessedId]" />
+			<flow-ref doc:name="Fetch Messages" doc:id="fb496b6b-937f-4c24-b593-4c7de4337729" name="fetchMessagesSubFlow" />
+			<flow-ref doc:name="Process Messages" doc:id="7235efba-b4fe-4ac5-9f3f-cb38b7776340" name="processMessagesSubFlow" />
+			<choice doc:name="Check and Update Last ID" doc:id="c688fbc7-2a34-4f71-a087-3c4fec71e057">
 			<when expression="#[sizeOf(payload) &gt; 0]">
 				<ee:transform doc:name="Transform Message" doc:id="6c9f9143-cc2e-4c3b-a687-93802bc6d86c">
 			<ee:message>
@@ -37,20 +40,25 @@ output application/json
 ---
 {
 	"lastProcessedId": vars.lastProcessedId,
-	"messageId": payload[-1].'msg-id'
+	"messageId": vars.messages[-1].'msg-id'
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 				<flow-ref doc:name="Update Last Processed ID" doc:id="c71b505f-12f1-47d1-9625-2a25423e70bb" name="updateLastProcessedIdSubFlow" />
 			</when>
-			<otherwise >
-				<logger level="INFO" doc:name="[INFO] No Messages" doc:id="1771b54a-5363-4275-b789-87ee76a7544a" message="There are no messages with ID greater than #[vars.lastProcessedId]"/>
+			<otherwise>
+				<logger level="INFO" doc:name="[INFO] No Messages" doc:id="1771b54a-5363-4275-b789-87ee76a7544a" message="There are no messages with ID greater than #[vars.lastProcessedId]" />
 			</otherwise>
 		</choice>
+		</parallel-foreach>
+		<logger level="INFO" doc:name="[INFO] End of Main Flow" doc:id="77578e2e-0901-4bf5-af65-56b0035082ab" message="End of Main Flow"/>
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b9e6c1ed-d655-4c9d-8fa8-41a80e57c78a" >
 				<flow-ref doc:name="Handle Error" doc:id="04e89550-a1af-47d8-b340-aed35163623f" name="errorSubFlow"/>
 			</on-error-propagate>
 		</error-handler>
 	</flow>
+	<sub-flow name="errorSubFlow" doc:id="5fe89991-5254-4d3b-93ce-66762abba462" >
+		<logger level="INFO" doc:name="[ERROR] Common Error" doc:id="1c7198e2-9c54-40dd-bf5c-47bb242fda74" message="#[{&#10;	error: error,&#10;	info: 'Common error'&#10;}]"/>
+	</sub-flow>
 </mule>

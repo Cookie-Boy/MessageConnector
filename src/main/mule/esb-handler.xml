@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<sub-flow name="getLastIdSubFlow" doc:id="2ba68ec4-417b-447a-af6a-d40b20a5cb68" >
+		<logger level="INFO" doc:name="[INFO] Start of Get Last ID Flow" doc:id="3b613777-b766-453f-9bf3-04671d73ac53" message="Start of Get Last ID Flow" />
+		<db:select doc:name="Select Last Processed ID" doc:id="768f9214-7686-411a-a93f-6e48cdba0735" config-ref="Postgres_ESB_Config">
+			<non-repeatable-iterable />
+			<db:sql><![CDATA[SELECT value FROM esb_obj_commit.cursor 
+WHERE name = 'last-message-id']]></db:sql>
+		</db:select>
+		<set-variable value="#[payload[0].value]" doc:name="Last Processed ID" doc:id="00d5093c-1386-4e7c-9b8f-8016610b8617" variableName="lastProcessedId"/>
+		<set-payload value="#[vars.lastProcessedId default 0]" doc:name="Put Last Processed ID to Payload" doc:id="d1df84c2-50cc-47da-b503-af323883f8b0" />
+		<logger level="INFO" doc:name="[INFO] End of Get Last ID Flow" doc:id="0bd82604-9f5f-4c51-8ba7-5dd22a9978aa" message="End of Get Last ID Flow" />
+	</sub-flow>
+	<sub-flow name="updateLastProcessedIdSubFlow" doc:id="a8b39a95-5a7c-466b-bd6f-a24237c38998" >
+		<logger level="INFO" doc:name="[INFO] Start of Update Last ID Flow" doc:id="4f404c97-91b9-4140-aaa0-f27221a0dc9b" message="Start of Update Last ID Flow" />
+		<choice doc:name="Validate Last Processed ID" doc:id="9db226f5-7140-4a65-b911-98abdbe2ef2c" >
+			<when expression="#[payload.lastProcessedId == null]" >
+				<db:insert doc:name="Insert" doc:id="7e70214b-b33f-4313-804d-4e103695def1" config-ref="Postgres_ESB_Config" >
+					<db:sql ><![CDATA[INSERT INTO esb_obj_commit.cursor (name, value, created_at, updated_at) 
+VALUES ('last-message-id', :msg_id, :created_at, :updated_at);]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	"msg_id": payload.messageId,
+	"created_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"},
+	"updated_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"}
+}]]]></db:input-parameters>
+				</db:insert>
+			</when>
+			<otherwise >
+				<db:update doc:name="Update" doc:id="f7e79323-899e-407a-938e-5be06930a7a8" config-ref="Postgres_ESB_Config" >
+					<db:sql ><![CDATA[UPDATE esb_obj_commit.cursor 
+SET value = :msg_id, updated_at = :updated_at 
+WHERE name = 'last-message-id']]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	"msg_id": payload.messageId,
+	"updated_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"}
+}]]]></db:input-parameters>
+				</db:update>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="[INFO] End of Update Last ID Flow" doc:id="6dce6c61-f6c8-4637-8024-4c1377d600f9" message="End of Update Last ID Flow" />
+	</sub-flow>
+</mule>

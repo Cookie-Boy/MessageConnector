@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<flow name="mockServerFlow" doc:id="15f2b3fe-a0a2-48be-8975-db0292c2494d" >
+		<http:listener doc:name="Listener" doc:id="15e5e9c0-1fdd-4cb8-a47b-ce204fa8b76d" config-ref="HTTP_Listener_config" path="/test"/>
+		<logger level="INFO" doc:name="[INFO] Start of Mock Server Flow" doc:id="61added5-1a1f-4342-9178-ee81e19f9d14" message="Start of Mock Server Flow" />
+		<logger level="INFO" doc:name="[INFO] Received Data" doc:id="94a392b8-329c-4e8d-b820-97801f7c9cb1" message="[MOCK_SERVER] Received data: #[payload]" />
+		<logger level="INFO" doc:name="[INFO] End of Mock Server Flow" doc:id="caa2d6b0-fe20-4d8a-a35a-cc34ffa003cc" message="End of Mock Server Flow"/>
+	</flow>
+	<sub-flow name="sendToMockSubFlow" doc:id="32a43363-d975-44ed-a2c6-5c0766f77093" >
+		<logger level="INFO" doc:name="[INFO] Start of Send to Mock Flow" doc:id="fab72d26-b536-49c3-9193-ae4d41e8e7d9" message="Start of Send to Mock Flow" />
+		<http:request method="POST" doc:name="POST Request to Mock" doc:id="14e5b8b6-6e49-432e-b2e4-6fa891663c57" path="/test" config-ref="HTTP_Request_configuration">
+			<non-repeatable-stream />
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json"
+}]]]></http:headers>
+		</http:request>
+		<logger level="INFO" doc:name="[INFO] End of Send to Mock Flow" doc:id="e1f2faf3-c979-4cca-ad8d-76c37c428fa0" message="End of Send to Mock Flow" />
+	</sub-flow>
+</mule>
