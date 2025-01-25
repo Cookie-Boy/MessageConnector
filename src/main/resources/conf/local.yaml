@@ -1,7 +1,14 @@
 middleware:
+  message_processing:
+    message_limit: '4'
+
+  timeouts:
+    main_for_each: '180000'
+
   scheduler:
     frequency: '30000'
-    startDelay: '0'
+    start_delay: '0'
+    
   postgres:
     common:
       host: 'localhost'
@@ -22,3 +29,14 @@ middleware:
       username: '${middleware.postgres.common.username}'
       password: '${middleware.postgres.common.password}'
       url: 'jdbc:postgresql://${middleware.postgres.msg.host}:${middleware.postgres.msg.port}/${middleware.postgres.msg.database}'
+      
+  http:
+    common:
+      host: 'localhost'
+      port: '8081'
+      path: ''
+    test:
+      host: '${middleware.http.common.host}'
+      port: '${middleware.http.common.port}'
+      path: '${middleware.http.common.path}/test'
+      url: '${middleware.http.common.host}:${middleware.http.common.port}${middleware.http.common.path}/test'

@@ -19,7 +19,7 @@ WHERE name = 'last-message-id']]></db:sql>
 		<logger level="INFO" doc:name="[INFO] Start of Update Last ID Flow" doc:id="4f404c97-91b9-4140-aaa0-f27221a0dc9b" message="Start of Update Last ID Flow" />
 		<choice doc:name="Validate Last Processed ID" doc:id="9db226f5-7140-4a65-b911-98abdbe2ef2c" >
 			<when expression="#[payload.lastProcessedId == null]" >
-				<db:insert doc:name="Insert" doc:id="7e70214b-b33f-4313-804d-4e103695def1" config-ref="Postgres_ESB_Config" >
+				<db:insert doc:name="Insert Last Processed ID" doc:id="7e70214b-b33f-4313-804d-4e103695def1" config-ref="Postgres_ESB_Config" >
 					<db:sql ><![CDATA[INSERT INTO esb_obj_commit.cursor (name, value, created_at, updated_at) 
 VALUES ('last-message-id', :msg_id, :created_at, :updated_at);]]></db:sql>
 					<db:input-parameters ><![CDATA[#[{
@@ -28,9 +28,10 @@ VALUES ('last-message-id', :msg_id, :created_at, :updated_at);]]></db:sql>
 	"updated_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"}
 }]]]></db:input-parameters>
 				</db:insert>
+				<logger level="INFO" doc:name="[INFO] Data created" doc:id="5f5e7868-2fa9-44c4-8c22-a355b3d2ed4f" message="Data created. Affected rows: #[payload.affectedRows]"/>
 			</when>
 			<otherwise >
-				<db:update doc:name="Update" doc:id="f7e79323-899e-407a-938e-5be06930a7a8" config-ref="Postgres_ESB_Config" >
+				<db:update doc:name="Update Last Processed ID" doc:id="f7e79323-899e-407a-938e-5be06930a7a8" config-ref="Postgres_ESB_Config" >
 					<db:sql ><![CDATA[UPDATE esb_obj_commit.cursor 
 SET value = :msg_id, updated_at = :updated_at 
 WHERE name = 'last-message-id']]></db:sql>
@@ -39,6 +40,7 @@ WHERE name = 'last-message-id']]></db:sql>
 	"updated_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"}
 }]]]></db:input-parameters>
 				</db:update>
+				<logger level="INFO" doc:name="[INFO] Data updated" doc:id="f913f5f6-240e-4c25-9499-dccf161dbf6f" message="Data updated. Affected rows: #[payload.affectedRows]"/>
 			</otherwise>
 		</choice>
 		<logger level="INFO" doc:name="[INFO] End of Update Last ID Flow" doc:id="6dce6c61-f6c8-4637-8024-4c1377d600f9" message="End of Update Last ID Flow" />

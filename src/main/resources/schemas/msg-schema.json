@@ -14,7 +14,8 @@
         },
         "value": {
           "type": "number",
-          "minimum": 0
+          "minimum": 0,
+          "exclusiveMinimum": true
         },
         "paymensTime": {
           "type": "string",
@@ -49,7 +50,8 @@
           },
           "price": {
             "type": "number",
-            "minimum": 0
+            "minimum": 0,
+            "exclusiveMinimum": true
           },
           "description": {
             "type": "string"
@@ -67,7 +69,8 @@
           "enum": ["RU", "KZ"]
         },
         "pvzId": {
-          "type": "integer"
+          "type": "integer",
+          "minimum": 0
         }
       },
       "required": ["country", "pvzId"],

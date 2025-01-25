@@ -14,25 +14,25 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 		<db:generic-connection driverClassName="org.postgresql.Driver" url='${middleware.postgres.msg.url}' user="${middleware.postgres.msg.username}" password="${middleware.postgres.msg.password}"/>
 	</db:config>
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="116c0da3-347e-41e1-9a89-a8e13523f8ae" >
-		<http:listener-connection host="0.0.0.0" port="8081" />
+		<http:listener-connection host="0.0.0.0" port="${middleware.http.test.port}" />
 	</http:listener-config>
 	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="39249e43-2213-4575-b24f-f7e0c986ed95" >
-		<http:request-connection host="localhost" port="8081" />
+		<http:request-connection host="${middleware.http.test.host}" port="${middleware.http.test.port}" />
 	</http:request-config>
 	<flow name="mainFlow" doc:id="e8072b4a-338e-4c62-916e-dcd2d86259d1" >
 		<scheduler doc:name="Scheduler" doc:id="d8cd38aa-5e8e-4839-8b87-e33493b889d6" >
 			<scheduling-strategy >
-				<fixed-frequency frequency="${middleware.scheduler.frequency}" startDelay="${middleware.scheduler.startDelay}"/>
+				<fixed-frequency frequency="${middleware.scheduler.frequency}" startDelay="${middleware.scheduler.start_delay}"/>
 			</scheduling-strategy>
 		</scheduler>
 		<logger level="INFO" doc:name="[INFO] Start of Main Flow" doc:id="ac10582d-751b-47a9-997a-c84aff3eb185" message="Start of Main Flow"/>
-		<parallel-foreach doc:name="Main Parallel For Each" doc:id="67f3be24-93a3-4e29-9034-59d01bc6e24f" maxConcurrency="1" timeout="180000" collection="#[[null]]">
+		<parallel-foreach doc:name="Main Parallel For Each" doc:id="67f3be24-93a3-4e29-9034-59d01bc6e24f" collection="#[[null]]" timeout="${middleware.timeouts.main_for_each}" maxConcurrency="1">
 			<flow-ref doc:name="Get Last Processed ID" doc:id="24d0f73d-0f73-49b3-8fb8-ad10638770a2" name="getLastIdSubFlow" />
 			<logger level="INFO" doc:name="[INFO] Received Last ID" doc:id="ac2245e7-42e8-4876-bf90-ed1fe106da7c" message="Received last ID: #[vars.lastProcessedId]" />
 			<flow-ref doc:name="Fetch Messages" doc:id="fb496b6b-937f-4c24-b593-4c7de4337729" name="fetchMessagesSubFlow" />
 			<flow-ref doc:name="Process Messages" doc:id="7235efba-b4fe-4ac5-9f3f-cb38b7776340" name="processMessagesSubFlow" />
 			<choice doc:name="Check and Update Last ID" doc:id="c688fbc7-2a34-4f71-a087-3c4fec71e057">
-			<when expression="#[sizeOf(payload) &gt; 0]">
+			<when expression="#[sizeOf(vars.messages) &gt; 0]">
 				<ee:transform doc:name="Transform Message" doc:id="6c9f9143-cc2e-4c3b-a687-93802bc6d86c">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
@@ -59,6 +59,7 @@ output application/json
 		</error-handler>
 	</flow>
 	<sub-flow name="errorSubFlow" doc:id="5fe89991-5254-4d3b-93ce-66762abba462" >
-		<logger level="INFO" doc:name="[ERROR] Common Error" doc:id="1c7198e2-9c54-40dd-bf5c-47bb242fda74" message="#[{&#10;	error: error,&#10;	info: 'Common error'&#10;}]"/>
+		<logger level="ERROR" doc:name="[ERROR] Log Error" doc:id="1c7198e2-9c54-40dd-bf5c-47bb242fda74" message="#[output application/json&#10;---&#10;{&#10;	error: error,&#10;	info: vars.info default 'Common error'&#10;}]"/>
+		<set-payload value="#[null]" doc:name="Set Null" doc:id="71fcb916-6760-44f3-ba68-cae83840a51b" />
 	</sub-flow>
 </mule>
