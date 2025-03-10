@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:java="http://www.mulesoft.org/schema/mule/java" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
+	<flow name="redeployFlow" doc:id="a622628f-42c8-4999-b036-c1cabffa18de" >
+		<http:listener doc:name="Listener" doc:id="62fabbd2-ae11-44d6-84e7-33f61aae9fda" config-ref="HTTP_Listener_config" path="${middleware.http.test.endpoint.redeploy.path}"/>
+		<set-variable value="#[now()]" doc:name="Начальное время работы" doc:id="b5976870-6159-4962-a6e1-6163b68c628e" variableName="startTime" />
+		<logger level="INFO" doc:name="[INFO] Начало редеплоя коннектора" doc:id="6887584d-838e-4f95-b474-5f68b373b5a6" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало редеплоя коннектора',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<file:copy doc:name="Копируем папку с коннектором во временную директорию" doc:id="47b4551d-8eb2-4336-842f-758d5467c430" config-ref="File_Config" sourcePath="${app.home}" targetPath="${middleware.paths.temp}" overwrite="true"/>
+		<java:invoke-static method="runInBackground(java.lang.String,java.lang.String)" doc:id="266d1089-9626-410a-b57c-99e22e048688" class="StaticProcess" target="statusCode" doc:name="Запускаем bash скрипт в фоне">
+			<java:args><![CDATA[#[{
+	arg0: p('middleware.paths.temp'),
+    arg1: p('middleware.paths.redeploy_script')
+}]]]></java:args>
+		</java:invoke-static>
+		<file:delete doc:name='Удаляем anchor файл ("выключаем" коннектор)' doc:id="59efe3f5-53ea-4520-8738-d3ba054348da" path="#[output text/plain --- p('middleware.paths.apps') ++ &quot;/${app.name}-anchor.txt&quot;]" config-ref="File_Config"/>
+		<logger level="INFO" doc:name="[INFO] Anchor файл успешно удален" doc:id="d3b1fcfb-735e-4111-8e71-782c3c852a84" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Anchor файл успешно удален',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<logger level="INFO" doc:name="[INFO] Конец редеплоя коннектора" doc:id="4234711f-9f8e-47b6-a889-a79a64215d51" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец редеплоя коннектора',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate [Общая ошибка]" doc:id="d67b565d-69d3-4e2a-a854-0d4005d51e5d" >
+				<flow-ref doc:name="Общая ошибка" doc:id="690b4384-8b5e-46e1-bfd5-2019c3195da9" name="errorFlow" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<file:config name="File_Config" doc:name="File Config" doc:id="1b07f065-de3d-43b5-a0be-7107afaea2cd" />
+	<flow name="updateLoggerLevelFlow" doc:id="e5862d1a-247a-4d82-bfad-60078894250e" >
+		<http:listener doc:name="Listener" doc:id="85011caa-cc08-4183-9d94-6f57ea7fe2a3" config-ref="HTTP_Listener_config" path="${middleware.http.test.endpoint.logging.path}/*">
+			<non-repeatable-stream />
+		</http:listener>
+		<set-variable value="#[now()]" doc:name="Начальное время работы" doc:id="6eb8837b-238d-45a9-a4cc-67baf9fd8fa2" variableName="startTime" />
+		<logger level="INFO" doc:name="[INFO] Начало работы updateLoggerLevelFlow" doc:id="384ae7e9-d64d-47ef-9bb8-fe159e08096b" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало работы updateLoggerLevelFlow',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<set-variable value="#[output text/plain&#10;import failIf from dw::Runtime&#10;var path = p('middleware.http.test.endpoint.logging.path')&#10;var level = attributes.requestUri replace (path ++ '/') with ''&#10;---&#10;failIf(&#10;	upper(level), &#10;	(value) -&gt; value != &quot;INFO&quot; and value != &quot;DEBUG&quot;, &#10;	&quot;Неверный уровень логирования: $level&quot;&#10;)]" doc:name="Уровень логирования" doc:id="3c69fffa-8241-4b0b-9023-d94f84d1ff93" variableName="level" />
+		<file:read doc:name="Читаем log4j2.xml" doc:id="ca78eaaf-2c17-4df5-b1e4-7d3a9e1493d4" config-ref="File_Config" path="${app.home}/log4j2.xml" outputMimeType="application/xml">
+			<non-repeatable-stream />
+		</file:read>
+		<set-payload value='#[output application/xml&#10;import modules::LoggerUtils&#10;---&#10;LoggerUtils::changeLogLevel(payload, "org.mule.runtime.core.internal.processor.LoggerMessageProcessor", vars.level)]' doc:name="Изменяем уровень логирования" doc:id="edd9957c-0ad9-49cd-855f-bd9b929908af" />
+		<file:write doc:name="Перезаписываем log4j2.xml" doc:id="bb34f3f4-1474-4ff3-b6f6-ce8809bd39fa" config-ref="File_Config" path="${app.home}/log4j2.xml"/>
+		<set-payload value='#[output json&#10;---&#10;{&#10;	"info": "Уровень логирования успешно изменен на " ++ vars.level&#10;}]' doc:name="Результирующий payload" doc:id="1a143b4c-6224-4bbc-b1d0-167fbe5d7f66" />
+		<logger level="INFO" doc:name="[INFO] Конец работы updateLoggerLevelFlow" doc:id="d7cfeee7-0146-41e5-9f88-2bae2d14de79" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец работы updateLoggerLevelFlow',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate [Общая ошибка]" doc:id="ee45db85-537d-4f4f-9a6a-86a9185682d8" >
+				<flow-ref doc:name="Общая ошибка" doc:id="15e9e8b2-8d36-479b-b3dc-7a0ce6da258f" name="errorFlow" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

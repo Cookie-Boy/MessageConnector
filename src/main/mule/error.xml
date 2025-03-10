@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<sub-flow name="errorFlow" doc:id="7e461d24-8be4-44ef-bdde-cf7feff1ad7c" >
+		<set-payload value="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	error: error,&#10;	info: vars.info default 'Общая ошибка',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" doc:name="JSON с ошибкой в payload" doc:id="ce0cbbae-5bef-4cf7-95f1-a96828c0af61" />
+		<logger level="ERROR" doc:name="[ERROR] Log Error" doc:id="55408d59-e024-4211-9ff5-e3e974ff40b2" message="#[payload]" />
+	</sub-flow>
+</mule>

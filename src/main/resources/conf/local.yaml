@@ -1,13 +1,18 @@
 middleware:
+  paths: 
+    apps: '${mule.home}/apps'
+    temp: '${mule.home}/temp'
+    redeploy_script: '${app.name}/redeploy.bash'
+
   message_processing:
     message_limit: '4'
 
   timeouts:
-    main_for_each: '180000'
+    freeze_protection: '180000'
 
   scheduler:
     frequency: '30000'
-    start_delay: '0'
+    start_delay: '5000'
     
   postgres:
     common:
@@ -39,4 +44,12 @@ middleware:
       host: '${middleware.http.common.host}'
       port: '${middleware.http.common.port}'
       path: '${middleware.http.common.path}/test'
-      url: '${middleware.http.common.host}:${middleware.http.common.port}${middleware.http.common.path}/test'
+      url: '${middleware.http.test.host}:${middleware.http.test.port}${middleware.http.test.path}'
+      endpoint:
+        connector:
+          path: '${middleware.http.test.path}/connector'
+        logging:
+          path: '${middleware.http.test.path}/logging'
+        redeploy:
+          path: '${middleware.http.test.path}/redeploy'
+    

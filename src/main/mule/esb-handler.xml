@@ -1,48 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+<mule xmlns:java="http://www.mulesoft.org/schema/mule/java" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
 	<sub-flow name="getLastIdSubFlow" doc:id="2ba68ec4-417b-447a-af6a-d40b20a5cb68" >
-		<logger level="INFO" doc:name="[INFO] Start of Get Last ID Flow" doc:id="3b613777-b766-453f-9bf3-04671d73ac53" message="Start of Get Last ID Flow" />
-		<db:select doc:name="Select Last Processed ID" doc:id="768f9214-7686-411a-a93f-6e48cdba0735" config-ref="Postgres_ESB_Config">
+		<logger level="INFO" doc:name="[INFO] Начало работы getLastIdFlow" doc:id="3b613777-b766-453f-9bf3-04671d73ac53" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало работы getLastIdFlow',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<db:select doc:name="Запрос для получения курсора" doc:id="768f9214-7686-411a-a93f-6e48cdba0735" config-ref="Postgres_ESB_Config">
 			<non-repeatable-iterable />
 			<db:sql><![CDATA[SELECT value FROM esb_obj_commit.cursor 
 WHERE name = 'last-message-id']]></db:sql>
 		</db:select>
-		<set-variable value="#[payload[0].value]" doc:name="Last Processed ID" doc:id="00d5093c-1386-4e7c-9b8f-8016610b8617" variableName="lastProcessedId"/>
-		<set-payload value="#[vars.lastProcessedId default 0]" doc:name="Put Last Processed ID to Payload" doc:id="d1df84c2-50cc-47da-b503-af323883f8b0" />
-		<logger level="INFO" doc:name="[INFO] End of Get Last ID Flow" doc:id="0bd82604-9f5f-4c51-8ba7-5dd22a9978aa" message="End of Get Last ID Flow" />
+		<set-variable value="#[payload[0].value]" doc:name="Результат запроса (курсор)" doc:id="00d5093c-1386-4e7c-9b8f-8016610b8617" variableName="lastProcessedId"/>
+		<logger level="INFO" doc:name="[INFO] Полученный курсор" doc:id="be424dc5-a11b-45c5-a83e-71a62fc10485" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "Полученный курсор: " ++ (vars.lastProcessedId default "null"),&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
+		<logger level="INFO" doc:name="[INFO] Конец работы getLastIdFlow" doc:id="0bd82604-9f5f-4c51-8ba7-5dd22a9978aa" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец работы getLastIdFlow',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
 	</sub-flow>
 	<sub-flow name="updateLastProcessedIdSubFlow" doc:id="a8b39a95-5a7c-466b-bd6f-a24237c38998" >
-		<logger level="INFO" doc:name="[INFO] Start of Update Last ID Flow" doc:id="4f404c97-91b9-4140-aaa0-f27221a0dc9b" message="Start of Update Last ID Flow" />
-		<choice doc:name="Validate Last Processed ID" doc:id="9db226f5-7140-4a65-b911-98abdbe2ef2c" >
-			<when expression="#[payload.lastProcessedId == null]" >
-				<db:insert doc:name="Insert Last Processed ID" doc:id="7e70214b-b33f-4313-804d-4e103695def1" config-ref="Postgres_ESB_Config" >
-					<db:sql ><![CDATA[INSERT INTO esb_obj_commit.cursor (name, value, created_at, updated_at) 
+		<logger level="INFO" doc:name="[INFO] Начало обновления курсора" doc:id="4f404c97-91b9-4140-aaa0-f27221a0dc9b" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало обновления курсора',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<choice doc:name="Кол-во сообщений &gt; 0?" doc:id="5f1651a7-504b-4727-af65-8b877390a70d">
+			<when expression="#[sizeOf(vars.messages) &gt; 0]">
+				<set-payload value="#[output application/json&#10;---&#10;{&#10;	&quot;lastProcessedId&quot;: vars.lastProcessedId,&#10;	&quot;messageId&quot;: vars.messages[-1].'msg-id'&#10;}]" doc:name="Складываем в payload курсор и messageId" doc:id="df06d5cf-059c-40bb-a76c-617ebf16dcdf" />
+				<choice doc:name="cursor == null?" doc:id="9db226f5-7140-4a65-b911-98abdbe2ef2c">
+			<when expression="#[payload.lastProcessedId == null]">
+				<set-payload value='#[output json&#10;---&#10;{&#10;	"msg_id": payload.messageId,&#10;	"created_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"},&#10;	"updated_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"}&#10;}]' doc:name="Параметры для SQL запроса" doc:id="725da249-f689-415f-ad56-0a1a6d0755dc" />
+				<logger level="INFO" doc:name="[INFO] Подготовленные данны для запроса" doc:id="5aecaf16-a2e4-4e0c-9b33-352a6e5aeacb" message="#[output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;import * from modules::LoggerUtils&#10;import nullableWriteLimitWithSize from modules::NullableWriteLimitWithSize&#10;---&#10;{&#10;	info: 'Начата генерация запроса',&#10;	prePrepareRequestData: {&#10;		(callIfLoggerEnoughLevel(() -&gt;&#10;			nullableWriteLimitWithSize(&quot;payload&quot;, payload, 7000),&#10;			&quot;DEBUG&quot;&#10;		))&#10;	},&#10;	elapsedTime: calculateDuration(vars.startTime, now())&#10;}]" />
+				<db:insert doc:name="Добавить курсор (INSERT, ранее отсутствовал)" doc:id="7e70214b-b33f-4313-804d-4e103695def1" config-ref="Postgres_ESB_Config">
+					<db:sql><![CDATA[INSERT INTO esb_obj_commit.cursor (name, value, created_at, updated_at) 
 VALUES ('last-message-id', :msg_id, :created_at, :updated_at);]]></db:sql>
-					<db:input-parameters ><![CDATA[#[{
-	"msg_id": payload.messageId,
-	"created_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"},
-	"updated_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"}
-}]]]></db:input-parameters>
+					<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>
 				</db:insert>
-				<logger level="INFO" doc:name="[INFO] Data created" doc:id="5f5e7868-2fa9-44c4-8c22-a355b3d2ed4f" message="Data created. Affected rows: #[payload.affectedRows]"/>
+				<logger level="INFO" doc:name="[INFO] Данные созданы" doc:id="5f5e7868-2fa9-44c4-8c22-a355b3d2ed4f" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "Данные созданы. Затронутые строки: " ++ payload.affectedRows,&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
 			</when>
-			<otherwise >
-				<db:update doc:name="Update Last Processed ID" doc:id="f7e79323-899e-407a-938e-5be06930a7a8" config-ref="Postgres_ESB_Config" >
-					<db:sql ><![CDATA[UPDATE esb_obj_commit.cursor 
+			<otherwise>
+				<set-payload value='#[output json&#10;---&#10;{&#10;	"msg_id": payload.messageId,&#10;	"updated_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"}&#10;}]' doc:name="Параметры для SQL запроса" doc:id="0d1ee727-d320-42a9-bc57-edfad03b4c37" />
+				<logger level="INFO" doc:name="[INFO] Подготовленные данные для запроса" doc:id="1dc39259-97fd-4c90-9008-955e0e93f378" message="#[output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;import * from modules::LoggerUtils&#10;import nullableWriteLimitWithSize from modules::NullableWriteLimitWithSize&#10;---&#10;{&#10;	info: 'Начата генерация запроса',&#10;	prePrepareRequestData: {&#10;		(callIfLoggerEnoughLevel(() -&gt;&#10;			nullableWriteLimitWithSize(&quot;payload&quot;, payload, 7000),&#10;			&quot;DEBUG&quot;&#10;		))&#10;	},&#10;	elapsedTime: calculateDuration(vars.startTime, now())&#10;}]" />
+				<db:update doc:name="Обновить курсор" doc:id="f7e79323-899e-407a-938e-5be06930a7a8" config-ref="Postgres_ESB_Config">
+					<db:sql><![CDATA[UPDATE esb_obj_commit.cursor 
 SET value = :msg_id, updated_at = :updated_at 
 WHERE name = 'last-message-id']]></db:sql>
-					<db:input-parameters ><![CDATA[#[{
-	"msg_id": payload.messageId,
-	"updated_at": now() as String {format: "yyyy-MM-dd HH:mm:ssXXX"}
-}]]]></db:input-parameters>
+					<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>
 				</db:update>
-				<logger level="INFO" doc:name="[INFO] Data updated" doc:id="f913f5f6-240e-4c25-9499-dccf161dbf6f" message="Data updated. Affected rows: #[payload.affectedRows]"/>
+				<logger level="INFO" doc:name="[INFO] Данные обновлены" doc:id="f913f5f6-240e-4c25-9499-dccf161dbf6f" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "Данные обновлены. Затронутые строки: " ++ payload.affectedRows,&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
 			</otherwise>
 		</choice>
-		<logger level="INFO" doc:name="[INFO] End of Update Last ID Flow" doc:id="6dce6c61-f6c8-4637-8024-4c1377d600f9" message="End of Update Last ID Flow" />
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="[INFO] Сообщений нет" doc:id="99e2e9c9-9b51-4699-8039-04130ab1735f" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "There are no messages with ID greater than " ++ (vars.lastProcessedId default "null"),&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="[INFO] Конец обновления курсора" doc:id="6dce6c61-f6c8-4637-8024-4c1377d600f9" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец обновления курсора',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
 	</sub-flow>
 </mule>

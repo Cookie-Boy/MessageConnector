@@ -10,14 +10,15 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			<non-repeatable-stream />
 			<http:response statusCode="200" />
 		</http:listener>
-		<logger level="INFO" doc:name="[INFO] Start of Mock Server Flow" doc:id="61added5-1a1f-4342-9178-ee81e19f9d14" message="Start of Mock Server Flow" />
-		<set-payload value="#[output application/json&#10;---&#10;payload]" doc:name="Parse Payload" doc:id="0a60c7c1-562b-43b1-810a-fc511053f6f7" />
-		<logger level="INFO" doc:name="[INFO] Received Data" doc:id="94a392b8-329c-4e8d-b820-97801f7c9cb1" message="[MOCK_SERVER] Received data: #[payload]" />
-		<logger level="INFO" doc:name="[INFO] End of Mock Server Flow" doc:id="caa2d6b0-fe20-4d8a-a35a-cc34ffa003cc" message="End of Mock Server Flow"/>
+		<set-variable value="#[now()]" doc:name="Начальное время работы" doc:id="75bf779a-9417-4454-9a0c-d7b91802e470" variableName="startTime" />
+		<logger level="INFO" doc:name="[INFO] Начало работы mockServerFlow" doc:id="61added5-1a1f-4342-9178-ee81e19f9d14" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "Начало работы mockServerFlow",&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
+		<set-payload value="#[output application/json&#10;---&#10;payload]" doc:name="Забираем payload (т.к. non-repetable)" doc:id="0a60c7c1-562b-43b1-810a-fc511053f6f7" />
+		<logger level="INFO" doc:name="[INFO] Полученные данные" doc:id="94a392b8-329c-4e8d-b820-97801f7c9cb1" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	receivedData: payload,&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
+		<logger level="INFO" doc:name="[INFO] Конец работы mockServerFlow" doc:id="caa2d6b0-fe20-4d8a-a35a-cc34ffa003cc" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "Конец работы mockServerFlow",&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]'/>
 	</flow>
 	<sub-flow name="sendToMockSubFlow" doc:id="32a43363-d975-44ed-a2c6-5c0766f77093" >
-		<logger level="INFO" doc:name="[INFO] Start of Send to Mock Flow" doc:id="fab72d26-b536-49c3-9193-ae4d41e8e7d9" message="Start of Send to Mock Flow" />
-		<http:request method="POST" doc:name="POST Request to Mock" doc:id="14e5b8b6-6e49-432e-b2e4-6fa891663c57" path="${middleware.http.test.path}" config-ref="HTTP_Request_configuration" targetValue="#[null]">
+		<logger level="INFO" doc:name="[INFO] Начало отправки на мок сервер" doc:id="fab72d26-b536-49c3-9193-ae4d41e8e7d9" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "Начало отправки на мок сервер",&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
+		<http:request method="POST" doc:name="POST запрос до мока" doc:id="14e5b8b6-6e49-432e-b2e4-6fa891663c57" path="${middleware.http.test.path}" config-ref="HTTP_Request_configuration" targetValue="#[null]">
 			<non-repeatable-stream />
 			<http:headers ><![CDATA[#[output application/java
 ---
@@ -25,6 +26,6 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 	"Content-Type" : "application/json"
 }]]]></http:headers>
 		</http:request>
-		<logger level="INFO" doc:name="[INFO] End of Send to Mock Flow" doc:id="e1f2faf3-c979-4cca-ad8d-76c37c428fa0" message="End of Send to Mock Flow" />
+		<logger level="INFO" doc:name="[INFO] Конец отправки на мок сервер" doc:id="e1f2faf3-c979-4cca-ad8d-76c37c428fa0" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "Конец отправки на мок сервер",&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
 	</sub-flow>
 </mule>

@@ -6,54 +6,55 @@
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
 	<sub-flow name="processMessagesSubFlow" doc:id="66e4f171-aac2-4722-95f5-fae43006d681" >
-		<logger level="INFO" doc:name="[INFO] Start of Process Messages Flow" doc:id="212b1a12-bf00-4ca3-924d-538837817168" message="Start of Process Messages Flow"/>
+		<logger level="INFO" doc:name="[INFO] Начало обработки сообщений" doc:id="212b1a12-bf00-4ca3-924d-538837817168" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало работы обработки сообщений',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]"/>
 		<parallel-foreach doc:name="Parallel process each message" doc:id="cfd25ead-a06d-4e6d-8859-6b73324ce1be" collection="#[vars.messages]" maxConcurrency="${middleware.message_processing.message_limit}">
-			<logger level="INFO" doc:name="[INFO] Processing Message" doc:id="e3a546f3-3a28-49e6-b993-ddd731f6c64b" message="Processing message with ID: #[payload.'msg-id']" />
-			<flow-ref doc:name="Validate Message" doc:id="b0a66a6c-2c60-4c75-a385-c88bc8449ff4" name="validateMessageSubFlow"/>
-			<choice doc:name="" doc:id="330622c8-71f4-42ae-867c-2d4760378dcf" >
+			<logger level="INFO" doc:name="[INFO] Обработка сообщения" doc:id="e3a546f3-3a28-49e6-b993-ddd731f6c64b" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	&quot;currentMessageId&quot;: payload.'msg-id',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+			<flow-ref doc:name="Валидация сообщения" doc:id="0bfe562a-2a1c-49d4-bd6e-4268085624b3" name="validateFlow"/>
+			<choice doc:name="Валидация прошла?" doc:id="9714315b-63be-465b-aaca-1fc45682270d" >
 				<when expression="#[payload != null]">
-					<flow-ref doc:name="Transform Message" doc:id="6998155f-10a2-42c8-9eac-4b1edbb36f09" name="transformMessageSubFlow" targetValue="#[null]"/>
-					<logger level="INFO" doc:name="[INFO] Validated and Transformed Message" doc:id="bdcdb63f-5106-4e4f-8c4b-db2dd8a30976" message="Validated and transformed message: #[payload]" />
-					<flow-ref doc:name="Send to Mock Server" doc:id="1dd655c1-6854-4866-8767-7612aeafdea0" name="sendToMockSubFlow" targetValue="#[null]"/>
+					<flow-ref doc:name="Трансформация сообщения" doc:id="6998155f-10a2-42c8-9eac-4b1edbb36f09" name="transformMessageSubFlow" targetValue="#[null]" />
+					<flow-ref doc:name="Отправка на мок сервер" doc:id="c00b6fe5-acd7-4336-9d39-bec52ac2661b" name="sendToMockSubFlow" />
 				</when>
 			</choice>
-			<logger level="INFO" doc:name="[INFO] End of Process Messages Flow" doc:id="d1cb70e8-a6e5-41df-90b5-64a3a4586b7d" message="End of Process Messages Flow" />
 		</parallel-foreach>
+		<logger level="INFO" doc:name="[INFO] Конец обработки сообщений" doc:id="d1cb70e8-a6e5-41df-90b5-64a3a4586b7d" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец обработки сообщений',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+	</sub-flow>
+	<sub-flow name="validateFlow" doc:id="fd4b7588-e6a6-400c-83c2-67f171422e3f" >
+		<logger level="INFO" doc:name="[INFO] Начало валидации сообщения" doc:id="24b03e0f-4798-499e-858b-6e64265e4799" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало работы валидации сообщения',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<set-payload value='#[output application/json&#10;---&#10;read(payload.msg.value, "application/json")]' doc:name="Конвертация String в JSON" doc:id="fa079b2e-5e98-4c00-bc50-e28c8e25f4e9" />
+		<try doc:name="Try" doc:id="df566f52-9c95-4fba-b8bc-18ab85ea330f">
+			<json:validate-schema doc:name="Валидация сообщения [JSON Schema]" doc:id="fd807f79-28ed-42ad-9e47-cb6a0b2fdb7c" schema="schemas/msg-schema.json">
+			</json:validate-schema>
+			<error-handler>
+				<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="2c77eb19-0d67-41cf-be6c-836040f9ae06" >
+					<set-variable value="#[output text/plain&#10;---&#10;'Item has not been validated']" doc:name="Строка с ошибкой" doc:id="9ada6b1d-c958-4531-8329-136a84cd9c7b" variableName="info" />
+					<flow-ref doc:name="Ошибка валидации соощения" doc:id="20f0c103-fb57-4bc2-af5f-8d95cb82e754" name="errorFlow" />
+					<set-payload value="#[null]" doc:name="Установка null" doc:id="d88ad614-550b-4425-8be0-95cf663b64a4" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<logger level="INFO" doc:name="[INFO] Конец валидации сообщения" doc:id="d73ea135-c2d4-44f7-9348-c95cb80864e1" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец валидации сообщения',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
 	</sub-flow>
 	<sub-flow name="fetchMessagesSubFlow" doc:id="8eb259a9-407f-432c-a119-006a4bf1a6df" >
-		<logger level="INFO" doc:name="[INFO] Start of Fetch Messages Flow" doc:id="9f546c96-0e24-48d4-81ab-7d8f371cfd09" message="Start of Fetch Messages Flow" />
-		<db:select doc:name="Fetch Messages" doc:id="3858f839-944e-4325-aae3-8a7c4ac16218" config-ref="Postgres_MSG_Config">
+		<logger level="INFO" doc:name="[INFO] Начало получения сообщений" doc:id="9f546c96-0e24-48d4-81ab-7d8f371cfd09" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало получения сообщений',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<db:select doc:name="Запрос для получения сообщений" doc:id="3858f839-944e-4325-aae3-8a7c4ac16218" config-ref="Postgres_MSG_Config">
 			<non-repeatable-iterable />
 			<db:sql><![CDATA[SELECT * FROM outer_msg_obj.msg_2025_1 
 WHERE "msg-id" > :lastProcessedId
 ORDER BY "msg-id" ASC
 LIMIT :messageLimit]]></db:sql>
 			<db:input-parameters><![CDATA[#[{
-	'lastProcessedId': payload,
+	'lastProcessedId': vars.lastProcessedId default 0,
 	'messageLimit': p('middleware.message_processing.message_limit') as Number
 }]]]></db:input-parameters>
 		</db:select>
-		<set-variable value="#[output application/java&#10;---&#10;payload as Array]" doc:name="Set Messages" doc:id="8820bce8-1f7a-4d87-8a75-d991cfa974ed" variableName="messages" />
-		<logger level="INFO" doc:name="[INFO] End of Fetch Messages Flow" doc:id="17370141-9cfe-4d87-8ca1-00427bc0f6fb" message="End of Fetch Messages Flow" />
-	</sub-flow>
-	<sub-flow name="validateMessageSubFlow" doc:id="a1be78dc-e1ef-4894-b52c-d69cf129f4aa" >
-		<logger level="INFO" doc:name="[INFO] Start of Validate Message Flow" doc:id="2682a0eb-f1c6-4afb-949f-376e05e8f945" message="Start of Validate Message Flow"/>
-		<set-payload value='#[output application/json&#10;---&#10;read(payload.msg.value, "application/json")]' doc:name="Convert String to JSON" doc:id="fa079b2e-5e98-4c00-bc50-e28c8e25f4e9" />
-		<try doc:name="Try" doc:id="df566f52-9c95-4fba-b8bc-18ab85ea330f">
-			<json:validate-schema doc:name="Validate schema" doc:id="fd807f79-28ed-42ad-9e47-cb6a0b2fdb7c" schema="schemas/msg-schema.json" >
-			</json:validate-schema>
-			<error-handler>
-				<on-error-continue enableNotifications="true" logException="false" doc:name="On Error Continue" doc:id="d8baff6c-f15c-4663-9ff1-ae43ab5b9706">
-					<set-variable value="#[output text/plain&#10;---&#10;'Item has not been validated']" doc:name="Set Info String for Error" doc:id="9ada6b1d-c958-4531-8329-136a84cd9c7b" variableName="info"/>
-					<flow-ref doc:name="Call Error Flow" doc:id="20f0c103-fb57-4bc2-af5f-8d95cb82e754" name="errorSubFlow"/>
-				</on-error-continue>
-			</error-handler>
-		</try>
-		<logger level="INFO" doc:name="[INFO] End of Validate Message Flow" doc:id="e2764e03-776e-4b3b-85fe-16c04f882ed6" message="End of Validate Message Flow"/>
+		<set-variable value="#[output application/java&#10;---&#10;payload as Array]" doc:name="Сообщения" doc:id="8820bce8-1f7a-4d87-8a75-d991cfa974ed" variableName="messages" />
+		<logger level="INFO" doc:name="[INFO] Конец получения сообщения" doc:id="17370141-9cfe-4d87-8ca1-00427bc0f6fb" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец получения сообщения',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
 	</sub-flow>
 	<sub-flow name="transformMessageSubFlow" doc:id="b2b90f11-789f-40cb-ae39-9e442bbaa5d6" >
-		<logger level="INFO" doc:name="[INFO] Start of Transform Message Flow" doc:id="230c5180-d0b9-4010-ae5f-02bad8ed0a2d" message="Start of Transform Message Flow"/>
-		<set-payload value="#[import modules::ValidateAndTransform&#10;output application/json&#10;---&#10;ValidateAndTransform::transformData(payload)]" doc:name="Transform Message" doc:id="6ad90552-a5a1-4ce6-b896-3490c221af98" />
-		<logger level="INFO" doc:name="[INFO] End of Transform Message Flow" doc:id="63f760d6-a425-4f1d-82a2-e17e514e5ab3" message="End of Transform Message Flow"/>
+		<logger level="INFO" doc:name="[INFO] Начало трансформации сообщения" doc:id="230c5180-d0b9-4010-ae5f-02bad8ed0a2d" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало трансформации сообщения',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]"/>
+		<set-payload value="#[import modules::ValidateAndTransform&#10;output application/json&#10;---&#10;ValidateAndTransform::transformData(payload)]" doc:name="Трансформация" doc:id="6ad90552-a5a1-4ce6-b896-3490c221af98" />
+		<logger level="INFO" doc:name="[INFO] Валидное и трансформированное сообщение" doc:id="573c8a3c-03ee-4c57-93e0-48879166862f" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	transformedMessage: payload,&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
+		<logger level="INFO" doc:name="[INFO] Конец трансформации сообщения" doc:id="63f760d6-a425-4f1d-82a2-e17e514e5ab3" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец трансформации сообщения',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
 	</sub-flow>
 </mule>

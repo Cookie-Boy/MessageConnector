@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+    <flow doc:id="2e684aae-72e3-4226-a3bc-1eb5720b59dc"
+          name="startFlow">
+        <scheduler doc:id="1d117e70-ca00-46fa-bb61-56149d4c3228"
+                   doc:name="При запуске">
+            <scheduling-strategy>
+                <fixed-frequency frequency="10000"
+                                 timeUnit="DAYS" />
+            </scheduling-strategy>
+        </scheduler>
+		<logger doc:id="f6e4dc69-4225-4fee-923f-fe39e496b79a"
+                doc:name="Проект в кластере запущен"
+                level="INFO"
+                message='#[output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"
+---
+{
+    info: "Проект в кластере запущен",
+}]' />
+    </flow>
+</mule>

@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns:db="http://www.mulesoft.org/schema/mule/db"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
 		<configuration-properties doc:name="Configuration properties" doc:id="90fadaae-1a2d-4c4d-b43b-bf5e7ce53d06" file="conf/local.yaml" />
 	<db:config name="Postgres_ESB_Config" doc:name="Database Config" doc:id="b07a287a-3cbe-4155-b061-2a78812802b3" >
 		<db:generic-connection url="${middleware.postgres.esb.url}" driverClassName="org.postgresql.Driver" user="${middleware.postgres.esb.username}" password="${middleware.postgres.esb.password}" />
@@ -19,47 +20,41 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="39249e43-2213-4575-b24f-f7e0c986ed95" >
 		<http:request-connection host="${middleware.http.test.host}" port="${middleware.http.test.port}" />
 	</http:request-config>
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="87b22997-e78b-4900-ad89-76fbd772707d" />
 	<flow name="mainFlow" doc:id="e8072b4a-338e-4c62-916e-dcd2d86259d1" >
-		<scheduler doc:name="Scheduler" doc:id="d8cd38aa-5e8e-4839-8b87-e33493b889d6" >
+		<scheduler doc:name="Каждые 30 секунд" doc:id="d8cd38aa-5e8e-4839-8b87-e33493b889d6" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="${middleware.scheduler.frequency}" startDelay="${middleware.scheduler.start_delay}"/>
 			</scheduling-strategy>
 		</scheduler>
-		<logger level="INFO" doc:name="[INFO] Start of Main Flow" doc:id="ac10582d-751b-47a9-997a-c84aff3eb185" message="Start of Main Flow"/>
-		<parallel-foreach doc:name="Main Parallel For Each" doc:id="67f3be24-93a3-4e29-9034-59d01bc6e24f" collection="#[[null]]" timeout="${middleware.timeouts.main_for_each}" maxConcurrency="1">
-			<flow-ref doc:name="Get Last Processed ID" doc:id="24d0f73d-0f73-49b3-8fb8-ad10638770a2" name="getLastIdSubFlow" />
-			<logger level="INFO" doc:name="[INFO] Received Last ID" doc:id="ac2245e7-42e8-4876-bf90-ed1fe106da7c" message="Received last ID: #[vars.lastProcessedId]" />
-			<flow-ref doc:name="Fetch Messages" doc:id="fb496b6b-937f-4c24-b593-4c7de4337729" name="fetchMessagesSubFlow" />
-			<flow-ref doc:name="Process Messages" doc:id="7235efba-b4fe-4ac5-9f3f-cb38b7776340" name="processMessagesSubFlow" />
-			<choice doc:name="Check and Update Last ID" doc:id="c688fbc7-2a34-4f71-a087-3c4fec71e057">
-			<when expression="#[sizeOf(vars.messages) &gt; 0]">
-				<ee:transform doc:name="Transform Message" doc:id="6c9f9143-cc2e-4c3b-a687-93802bc6d86c">
-			<ee:message>
-				<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-	"lastProcessedId": vars.lastProcessedId,
-	"messageId": vars.messages[-1].'msg-id'
-}]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-				<flow-ref doc:name="Update Last Processed ID" doc:id="c71b505f-12f1-47d1-9625-2a25423e70bb" name="updateLastProcessedIdSubFlow" />
+		<set-variable value="#[now()]" doc:name="Начальное время работы" doc:id="84c3d84a-3ca9-49f5-b4c2-d46dd9452ed8" variableName="startTime"/>
+		<logger level="INFO" doc:name="[INFO] Начало работы mainFlow" doc:id="ac10582d-751b-47a9-997a-c84aff3eb185" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало работы mainFlow',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<parallel-foreach doc:name="Защита от зависания [Parallel For Each]" doc:id="67f3be24-93a3-4e29-9034-59d01bc6e24f" collection="#[[null]]" timeout="${middleware.timeouts.freeze_protection}" maxConcurrency="1">
+			<os:retrieve doc:name="Получаем статус из ObjectStore" doc:id="3a24ed9c-3a6f-4ddd-86e8-2e36b1cfc627" key="status" objectStore="Object_store">
+			<os:default-value><![CDATA[#[true]]]></os:default-value>
+		</os:retrieve>
+			<choice doc:name="Обход запрещен?" doc:id="3025e419-3c1d-4c82-86cc-9f83a9f84e94">
+			<when expression="#[payload ~= false]">
+				<logger level="INFO" doc:name="[INFO] Коннектор на паузе..." doc:id="d60a9485-d559-4f0c-a0d3-ae8333bb4902" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'В данный момент коннектор на паузе...',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
 			</when>
-			<otherwise>
-				<logger level="INFO" doc:name="[INFO] No Messages" doc:id="1771b54a-5363-4275-b789-87ee76a7544a" message="There are no messages with ID greater than #[vars.lastProcessedId]" />
+				<otherwise>
+					<flow-ref doc:name="Обход" doc:id="9988cb4b-9b91-4651-853d-b607abe8cbcc" name="bypassFlow"/>
 			</otherwise>
 		</choice>
 		</parallel-foreach>
-		<logger level="INFO" doc:name="[INFO] End of Main Flow" doc:id="77578e2e-0901-4bf5-af65-56b0035082ab" message="End of Main Flow"/>
+		<logger level="INFO" doc:name="[INFO] Конец работы mainFlow" doc:id="77578e2e-0901-4bf5-af65-56b0035082ab" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец работы mainFlow',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]"/>
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b9e6c1ed-d655-4c9d-8fa8-41a80e57c78a" >
-				<flow-ref doc:name="Handle Error" doc:id="04e89550-a1af-47d8-b340-aed35163623f" name="errorSubFlow"/>
+				<flow-ref doc:name="Общая ошибка" doc:id="04e89550-a1af-47d8-b340-aed35163623f" name="errorFlow"/>
 			</on-error-propagate>
 		</error-handler>
 	</flow>
-	<sub-flow name="errorSubFlow" doc:id="5fe89991-5254-4d3b-93ce-66762abba462" >
-		<logger level="ERROR" doc:name="[ERROR] Log Error" doc:id="1c7198e2-9c54-40dd-bf5c-47bb242fda74" message="#[output application/json&#10;---&#10;{&#10;	error: error,&#10;	info: vars.info default 'Common error'&#10;}]"/>
-		<set-payload value="#[null]" doc:name="Set Null" doc:id="71fcb916-6760-44f3-ba68-cae83840a51b" />
+	<sub-flow name="bypassFlow" doc:id="200fcd52-5ef4-4281-b0b7-109cfc6932a1" >
+		<logger level="INFO" doc:name="[INFO] Начало обхода" doc:id="ac2245e7-42e8-4876-bf90-ed1fe106da7c" message='#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn="everywhere"&#10;---&#10;{&#10;	info: "Начало обхода",&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]' />
+		<flow-ref doc:name="1 Получаем курсор" doc:id="24d0f73d-0f73-49b3-8fb8-ad10638770a2" name="getLastIdSubFlow" />
+		<flow-ref doc:name="2 Получаем сообщения" doc:id="fb496b6b-937f-4c24-b593-4c7de4337729" name="fetchMessagesSubFlow" />
+		<flow-ref doc:name="3 Обработка сообщений" doc:id="7235efba-b4fe-4ac5-9f3f-cb38b7776340" name="processMessagesSubFlow" />
+		<flow-ref doc:name="4 Обновляем курсор" doc:id="056a97ac-056b-4db9-aa67-9ff3cdc87ea0" name="updateLastProcessedIdSubFlow"/>
+		<logger level="INFO" doc:name="[INFO] Конец обхода" doc:id="4ba55455-bca5-4359-81a5-d9d9887a62e3" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец обхода',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
 	</sub-flow>
 </mule>
