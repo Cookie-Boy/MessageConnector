@@ -8,13 +8,40 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 	<flow name="pauseResumeFlow" doc:id="c551e354-6701-462e-aa42-2d57fb324796" >
 		<http:listener doc:name="Listener" doc:id="736ab56d-4fa3-40af-bda8-370c378caa67" config-ref="HTTP_Listener_config" path="${middleware.http.test.endpoint.connector.path}/*"/>
 		<set-variable value="#[now()]" doc:name="Начальное время работы" doc:id="51bd7523-bf28-4b48-9088-b538f92bfd8f" variableName="startTime" />
-		<logger level="INFO" doc:name="[INFO] Начало работы pauseResumeFlow" doc:id="bf956d74-6f35-4ec4-8cb2-3f06ed439014" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Начало работы pauseResumeFlow',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
-		<set-variable value="#[output text/plain&#10;import failIf from dw::Runtime&#10;&#10;var path = p('middleware.http.test.endpoint.connector.path')&#10;var mode = attributes.requestUri replace (path ++ '/') with ''&#10;var status = failIf(&#10;	upper(mode), &#10;	(value) -&gt; value != &quot;PAUSE&quot; and value != &quot;RESUME&quot;, &#10;	&quot;Неверный эндпоинт : $mode&quot;&#10;)&#10;---&#10;status == &quot;RESUME&quot;]" doc:name="Продолжить работу (true) или оставновить (false)?" doc:id="ef9c32ae-36e0-43a9-9ab1-7edc329aa59c" variableName="status" />
+		<logger level="INFO" doc:name="[INFO] Начало работы pauseResumeFlow" doc:id="bf956d74-6f35-4ec4-8cb2-3f06ed439014" message="#[import modules::LoggerUtils
+output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;
+---
+{
+	info: 'Начало работы pauseResumeFlow',
+	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())
+}]" />
+		<set-variable value="#[output text/plain
+import failIf from dw::Runtime
+
+var path = p('middleware.http.test.endpoint.connector.path')
+var mode = attributes.requestUri replace (path ++ '/') with ''
+var status = failIf(
+	upper(mode), 
+	(value) -&gt; value != &quot;PAUSE&quot; and value != &quot;RESUME&quot;, 
+	&quot;Неверный эндпоинт : $mode&quot;
+)
+---
+status == &quot;RESUME&quot;]" doc:name="Продолжить работу (true) или оставновить (false)?" doc:id="ef9c32ae-36e0-43a9-9ab1-7edc329aa59c" variableName="status" />
 		<os:store doc:name="Смена флага status" doc:id="7cc319e0-d7d2-43d4-82e7-6e9b3be7cf9e" key="status" objectStore="Object_store">
 			<os:value><![CDATA[#[output java --- vars.status]]]></os:value>
 		</os:store>
-		<set-payload value='#[output json&#10;---&#10;{&#10;	"info": "Работа коннектора " ++ if (vars.status) "возобновлена." else "приостановлена..."&#10;}]' doc:name="Результирующий payload" doc:id="9d382aaf-7d57-42f4-9eb8-cb53873fb706" />
-		<logger level="INFO" doc:name="[INFO] Конец работы pauseResumeFlow" doc:id="f6b7f951-d37a-48d6-a86b-91a974252229" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец работы pauseResumeFlow',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<set-payload value='#[output json
+---
+{
+	"info": "Работа коннектора " ++ if (vars.status) "возобновлена." else "приостановлена..."
+}]' doc:name="Результирующий payload" doc:id="9d382aaf-7d57-42f4-9eb8-cb53873fb706" />
+		<logger level="INFO" doc:name="[INFO] Конец работы pauseResumeFlow" doc:id="f6b7f951-d37a-48d6-a86b-91a974252229" message="#[import modules::LoggerUtils
+output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;
+---
+{
+	info: 'Конец работы pauseResumeFlow',
+	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())
+}]" />
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate [Общая ошибка]" doc:id="ff8d07d6-b73b-471d-b7a1-83ad5e076ee6" >
 				<flow-ref doc:name="Общая ошибка" doc:id="5737fa7b-6b8c-466e-b33c-d932177a3959" name="errorFlow"/>

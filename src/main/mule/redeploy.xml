@@ -20,6 +20,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
 		</java:invoke-static>
 		<file:delete doc:name='Удаляем anchor файл ("выключаем" коннектор)' doc:id="59efe3f5-53ea-4520-8738-d3ba054348da" path="#[output text/plain --- p('middleware.paths.apps') ++ &quot;/${app.name}-anchor.txt&quot;]" config-ref="File_Config"/>
 		<logger level="INFO" doc:name="[INFO] Anchor файл успешно удален" doc:id="d3b1fcfb-735e-4111-8e71-782c3c852a84" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Anchor файл успешно удален',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
+		<set-payload value='#[output json&#10;---&#10;{&#10;	"info": "Запрос на редеплой коннектора получен."&#10;}]' doc:name="Результирующий payload" doc:id="b03820e3-ccfe-494e-9445-81fbe3dfe86e" />
 		<logger level="INFO" doc:name="[INFO] Конец редеплоя коннектора" doc:id="4234711f-9f8e-47b6-a889-a79a64215d51" message="#[import modules::LoggerUtils&#10;output json writeAttributes=true, duplicateKeyAsArray=true, indent=false, skipNullOn=&quot;everywhere&quot;&#10;---&#10;{&#10;	info: 'Конец редеплоя коннектора',&#10;	elapsedTime: LoggerUtils::calculateDuration(vars.startTime, now())&#10;}]" />
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate [Общая ошибка]" doc:id="d67b565d-69d3-4e2a-a854-0d4005d51e5d" >

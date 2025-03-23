@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Configuration monitorInterval="10">
+	<Properties>
+        <Property name="log4j2.enableThreadlocals">true</Property>
+        <Property name="log4j2.enableDirectEncoders">true</Property>
+    </Properties>
 
     <!--These are some of the loggers you can enable. 
         There are several more you can find in the documentation. 
@@ -9,6 +13,16 @@
         see them in the mule_ee.log file. -->
 
     <Appenders>
+        <Http name="HTTP" url="http://localhost:5044">
+	        <JsonLayout compact="true" eventEol="true" properties="true">
+                <KeyValuePair key="timestamp" value="${date:yyyy-MM-dd'T'HH:mm:ss.SSSZ}"/>
+                <KeyValuePair key="level" value="${level}"/>
+                <KeyValuePair key="logger" value="${logger}"/>
+                <KeyValuePair key="message" value="${message}"/>
+                <KeyValuePair key="thread" value="${thread}"/>
+	        </JsonLayout>
+        </Http>
+    
         <RollingFile name="file" fileName="${sys:mule.home}${sys:file.separator}logs${sys:file.separator}messageconnector.log"
                  filePattern="${sys:mule.home}${sys:file.separator}logs${sys:file.separator}messageconnector-%i.log">
             <PatternLayout pattern="%-5p %d [%t] [processor: %X{processorPath}; event: %X{correlationId}] %c: %m%n"/>
@@ -30,6 +44,7 @@
 
         <AsyncRoot level="INFO">
             <AppenderRef ref="file"/>
+            <AppenderRef ref="HTTP"/>
         </AsyncRoot>
     </Loggers>
 

@@ -26,7 +26,7 @@ middleware:
       port: '${middleware.postgres.common.port}'
       username: '${middleware.postgres.common.username}'
       password: '${middleware.postgres.common.password}'
-      url: 'jdbc:postgresql://${middleware.postgres.esb.host}:${middleware.postgres.esb.port}/${middleware.postgres.esb.database}' 
+      url: 'jdbc:postgresql://${middleware.postgres.esb.host}:${middleware.postgres.esb.port}/${middleware.postgres.esb.database}'
     msg:
       database: 'msg'
       host: '${middleware.postgres.common.host}'
